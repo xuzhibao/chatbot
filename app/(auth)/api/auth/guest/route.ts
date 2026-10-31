@@ -4,6 +4,7 @@ import { signIn } from "@/app/(auth)/auth";
 import { isDevelopmentEnvironment } from "@/lib/constants";
 
 export async function GET(request: Request) {
+  if (process.env.ALLOW_GUEST_CHAT !== "1") return new Response(null, { status: 403 });
   const { searchParams } = new URL(request.url);
   const rawRedirect = searchParams.get("redirectUrl") || "/";
   const redirectUrl =
