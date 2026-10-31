@@ -9,6 +9,11 @@ export async function proxy(request: NextRequest) {
     return new Response("pong", { status: 200 });
   }
 
+  // /v1 has its own strict Bearer authorization. Never redirect API clients.
+  if (pathname === "/v1" || pathname.startsWith("/v1/")) {
+    return NextResponse.next();
+  }
+
   if (pathname.startsWith("/api/auth")) {
     return NextResponse.next();
   }
