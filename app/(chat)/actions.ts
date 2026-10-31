@@ -14,6 +14,7 @@ import {
   updateChatVisibilityById,
 } from "@/lib/db/queries";
 import { getTextFromMessage } from "@/lib/utils";
+import { checkIpRateLimit } from "@/lib/ratelimit";
 
 export async function saveChatModelAsCookie(model: string) {
   const cookieStore = await cookies();
@@ -25,6 +26,10 @@ export async function generateTitleFromUserMessage({
 }: {
   message: UIMessage;
 }) {
+  // Also callable as a Server Action: never allow anonymous, unmetered model work.
+  const session = await auth();
+  if (!session?.user || (session.user.type === "guest" && process.env.ALLOW_GUEST_CHAT !== "1")) throw new Error("Unauthorized");
+  await checkIpRateLimit(undefined);
   const { text } = await generateText({
     instructions: titlePrompt,
     model: getTitleModel(),
