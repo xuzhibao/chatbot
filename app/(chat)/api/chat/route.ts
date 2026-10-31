@@ -89,7 +89,10 @@ export async function POST(request: Request) {
       return new ChatbotError("forbidden:api").toResponse();
     }
 
-    if (!session?.user || (session.user.type === "guest" && process.env.ALLOW_GUEST_CHAT !== "1")) {
+    if (
+      !session?.user ||
+      (session.user.type === "guest" && process.env.ALLOW_GUEST_CHAT !== "1")
+    ) {
       return new ChatbotError("unauthorized:chat").toResponse();
     }
 

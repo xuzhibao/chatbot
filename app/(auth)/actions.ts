@@ -12,10 +12,18 @@ const authFormSchema = z.object({
   password: z.string().min(6),
 });
 
-const registrationSchema = authFormSchema.extend({ password: z.string().min(12).max(128) });
+const registrationSchema = authFormSchema.extend({
+  password: z.string().min(12).max(128),
+});
 function validInvite(value: FormDataEntryValue | null): boolean {
   const expected = process.env.WEB_SIGNUP_INVITE_CODE || "";
-  if (typeof value !== "string" || value.length < 24 || value.length > 512 || expected.length < 24) return false;
+  if (
+    typeof value !== "string" ||
+    value.length < 24 ||
+    value.length > 512 ||
+    expected.length < 24
+  )
+    return false;
   return timingSafeEqual(
     createHash("sha256").update(value).digest(),
     createHash("sha256").update(expected).digest()
@@ -67,7 +75,8 @@ export const register = async (
   formData: FormData
 ): Promise<RegisterActionState> => {
   try {
-    if (!validInvite(formData.get("inviteCode"))) return { status: "invalid_data" };
+    if (!validInvite(formData.get("inviteCode")))
+      return { status: "invalid_data" };
     const validatedData = registrationSchema.parse({
       email: formData.get("email"),
       password: formData.get("password"),

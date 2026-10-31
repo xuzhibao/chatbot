@@ -54,7 +54,13 @@ export default function Page() {
       <AuthForm action={handleSubmit} defaultEmail={email}>
         <div className="flex flex-col gap-2">
           <Label htmlFor="inviteCode">Invitation code</Label>
-          <Input id="inviteCode" name="inviteCode" type="password" required autoComplete="off" />
+          <Input
+            id="inviteCode"
+            name="inviteCode"
+            type="password"
+            required
+            autoComplete="off"
+          />
         </div>
         <SubmitButton isSuccessful={isSuccessful}>Sign up</SubmitButton>
         <p className="text-center text-[13px] text-muted-foreground">

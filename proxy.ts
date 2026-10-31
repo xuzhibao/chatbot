@@ -26,20 +26,29 @@ export async function proxy(request: NextRequest) {
 
   const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
-  const isGuest = token?.type === "guest" || guestRegex.test(token?.email ?? "");
+  const isGuest =
+    token?.type === "guest" || guestRegex.test(token?.email ?? "");
   const guestAllowed = process.env.ALLOW_GUEST_CHAT === "1";
   if (!token || (isGuest && !guestAllowed)) {
-    if (pathname === "/login" || pathname === "/register") return NextResponse.next();
+    if (pathname === "/login" || pathname === "/register")
+      return NextResponse.next();
     if (!token && guestAllowed) {
       const redirectUrl = encodeURIComponent(new URL(request.url).pathname);
       return NextResponse.redirect(
-        new URL(`${base}/api/auth/guest?redirectUrl=${redirectUrl}`, request.url)
+        new URL(
+          `${base}/api/auth/guest?redirectUrl=${redirectUrl}`,
+          request.url
+        )
       );
     }
     if (pathname.startsWith("/api/")) {
-      return NextResponse.json({ error: "Unauthorized" }, {
-        status: 401, headers: { "Cache-Control": "no-store" },
-      });
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        {
+          status: 401,
+          headers: { "Cache-Control": "no-store" },
+        }
+      );
     }
     return NextResponse.redirect(new URL(`${base}/login`, request.url));
   }

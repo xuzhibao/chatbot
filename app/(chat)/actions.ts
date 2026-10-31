@@ -28,7 +28,11 @@ export async function generateTitleFromUserMessage({
 }) {
   // Also callable as a Server Action: never allow anonymous, unmetered model work.
   const session = await auth();
-  if (!session?.user || (session.user.type === "guest" && process.env.ALLOW_GUEST_CHAT !== "1")) throw new Error("Unauthorized");
+  if (
+    !session?.user ||
+    (session.user.type === "guest" && process.env.ALLOW_GUEST_CHAT !== "1")
+  )
+    throw new Error("Unauthorized");
   await checkIpRateLimit(undefined);
   const { text } = await generateText({
     instructions: titlePrompt,
