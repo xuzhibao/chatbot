@@ -1,48 +1,64 @@
+import { createHash } from "node:crypto";
 import { createClient } from "redis";
-
 import { isProductionEnvironment } from "@/lib/constants";
 import { ChatbotError } from "@/lib/errors";
-
-const MAX_MESSAGES = 10;
-const TTL_SECONDS = 60 * 60;
-
-let client: ReturnType<typeof createClient> | null = null;
-
-function getClient() {
-  if (!client && process.env.REDIS_URL) {
-    client = createClient({ url: process.env.REDIS_URL });
-    client.on("error", () => undefined);
-    client.connect().catch(() => {
-      client = null;
+let connected: Promise<ReturnType<typeof createClient>> | undefined;
+async function redis() {
+  if (!process.env.REDIS_URL) throw new Error("Missing Redis");
+  if (!connected) {
+    const client = createClient({
+      url: process.env.REDIS_URL,
+      socket: { connectTimeout: 3000, reconnectStrategy: false },
     });
+    client.on("error", () => {});
+    connected = client
+      .connect()
+      .then(() => client as ReturnType<typeof createClient>)
+      .catch((e) => {
+        connected = undefined;
+        throw e;
+      });
+  }
+  const client = await connected;
+  if (!client || !client.isReady) {
+    connected = undefined;
+    throw new Error("Redis unavailable");
   }
   return client;
 }
-
 export async function checkIpRateLimit(ip: string | undefined) {
-  if (!isProductionEnvironment || !ip) {
-    return;
-  }
-
-  const redis = getClient();
-  if (!redis?.isReady) {
-    return;
-  }
-
+  if (!isProductionEnvironment) return;
   try {
-    const key = `ip-rate-limit:${ip}`;
-    const [count] = await redis
-      .multi()
-      .incr(key)
-      .expire(key, TTL_SECONDS, "NX")
-      .exec();
-
-    if (typeof count === "number" && count > MAX_MESSAGES) {
-      throw new ChatbotError("rate_limit:chat");
+    const c = await redis(),
+      hour = Math.floor(Date.now() / 3600000),
+      day = Math.floor(Date.now() / 86400000);
+    const entries = [{ key: "chat:global:" + day, max: 300, ttl: 172800 }];
+    if (ip)
+      entries.push({
+        key:
+          "chat:ip:" +
+          createHash("sha256").update(ip).digest("hex") +
+          ":" +
+          hour,
+        max: 30,
+        ttl: 7200,
+      });
+    const tx = c.multi();
+    for (const e of entries) {
+      tx.incr(e.key);
+      tx.expire(e.key, e.ttl, "NX");
     }
-  } catch (error) {
-    if (error instanceof ChatbotError) {
-      throw error;
-    }
+    const values = await tx.exec();
+    if (
+      !Array.isArray(values) ||
+      values.length !== entries.length * 2 ||
+      entries.some(
+        (e, i) =>
+          typeof values[i * 2] !== "number" || Number(values[i * 2]) > e.max
+      )
+    )
+      throw new Error("Exceeded quota");
+  } catch {
+    throw new ChatbotError("rate_limit:chat");
   }
 }

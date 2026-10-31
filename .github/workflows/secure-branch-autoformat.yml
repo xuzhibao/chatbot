@@ -1,0 +1,46 @@
+name: One-time safe formatting of security-review branch
+on:
+  push:
+    branches:
+      - secure-openai-gateway
+permissions:
+  contents: write
+concurrency:
+  group: secure-branch-autoformat
+  cancel-in-progress: false
+jobs:
+  format:
+    if: github.repository == 'xuzhibao/chatbot'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: secure-openai-gateway
+          persist-credentials: true
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - name: Install lockfile dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Apply only safe automated formatting fixes
+        run: |
+          pnpm exec biome format --write .
+      - name: Commit formatted files on review branch only
+        run: |
+          export HUSKY=0
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add --all
+          if ! git diff --cached --quiet; then
+            git commit -m "style: apply safe formatting to secure gateway review branch"
+            git push origin HEAD:secure-openai-gateway
+          fi
+      - name: Report remaining lint errors
+        run: pnpm check
+      - name: Run TypeScript check
+        if: always()
+        run: pnpm exec tsc --noEmit

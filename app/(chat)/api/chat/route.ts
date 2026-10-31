@@ -27,7 +27,6 @@ import { editDocument } from "@/lib/ai/tools/edit-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
-import { isProductionEnvironment } from "@/lib/constants";
 import {
   createStreamId,
   deleteChatById,
@@ -90,7 +89,10 @@ export async function POST(request: Request) {
       return new ChatbotError("forbidden:api").toResponse();
     }
 
-    if (!session?.user) {
+    if (
+      !session?.user ||
+      (session.user.type === "guest" && process.env.ALLOW_GUEST_CHAT !== "1")
+    ) {
       return new ChatbotError("unauthorized:chat").toResponse();
     }
 
@@ -305,7 +307,7 @@ export async function POST(request: Request) {
           stopWhen: isStepCount(5),
           telemetry: {
             functionId: "stream-text",
-            isEnabled: isProductionEnvironment,
+            isEnabled: false,
           },
           tools: {
             createDocument: createDocument({
@@ -439,7 +441,7 @@ export async function POST(request: Request) {
       return new ChatbotError("bad_request:activate_gateway").toResponse();
     }
 
-    console.error("Unhandled error in chat API:", error, { vercelId });
+    console.error("Chat API request failed", { vercelId });
     return new ChatbotError("offline:chat").toResponse();
   }
 }

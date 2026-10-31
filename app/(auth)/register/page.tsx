@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useActionState, useEffect, useState } from "react";
 import { AuthForm } from "@/components/chat/auth-form";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { SubmitButton } from "@/components/chat/submit-button";
 import { toast } from "@/components/chat/toast";
 import { type RegisterActionState, register } from "../actions";
@@ -50,6 +52,16 @@ export default function Page() {
       <h1 className="text-2xl font-semibold tracking-tight">Create account</h1>
       <p className="text-sm text-muted-foreground">Get started for free</p>
       <AuthForm action={handleSubmit} defaultEmail={email}>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="inviteCode">Invitation code</Label>
+          <Input
+            id="inviteCode"
+            name="inviteCode"
+            type="password"
+            required
+            autoComplete="off"
+          />
+        </div>
         <SubmitButton isSuccessful={isSuccessful}>Sign up</SubmitButton>
         <p className="text-center text-[13px] text-muted-foreground">
           {"Have an account? "}

@@ -87,13 +87,17 @@ export const {
         password: { label: "Password", type: "password" },
       },
     }),
-    Credentials({
-      async authorize() {
-        const [guestUser] = await createGuestUser();
-        return { ...guestUser, type: "guest" };
-      },
-      credentials: {},
-      id: "guest",
-    }),
+    ...(process.env.ALLOW_GUEST_CHAT === "1"
+      ? [
+          Credentials({
+            async authorize() {
+              const [guestUser] = await createGuestUser();
+              return { ...guestUser, type: "guest" };
+            },
+            credentials: {},
+            id: "guest",
+          }),
+        ]
+      : []),
   ],
 });
